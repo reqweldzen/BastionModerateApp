@@ -1,31 +1,36 @@
 ﻿using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BastionModerateApp
 {
 	internal class Program
 	{
-		private readonly DiscordSocketClient _client;
+		private DiscordSocketClient _client;
+		private CommandService _commands;
+		private IServiceProvider _provider;
 		
 		private static void Main(string[] args)
 		{
 			new Program().MainAsync().GetAwaiter().GetResult();
 		}
-
-		public Program()
+		
+		public async Task MainAsync()
 		{
+			_provider = new ServiceCollection().BuildServiceProvider();
+			_commands = new CommandService();
+			await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
+			
 			_client = new DiscordSocketClient();
 
 			_client.Log += LogAsync;
-			_client.Ready += ReadyAsync;
 			_client.MessageReceived += MessageReceivedAsync;
-		}
-
-		public async Task MainAsync()
-		{
+			
 			await _client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("DiscordToken"));
 			await _client.StartAsync();
 
@@ -45,13 +50,29 @@ namespace BastionModerateApp
 			return Task.CompletedTask;
 		}
 
-		private async Task MessageReceivedAsync(SocketMessage message)
+		private async Task MessageReceivedAsync(SocketMessage messageParam)
 		{
-			if (message.Author.Id == _client.CurrentUser.Id)
-				return;
+			var message = messageParam as SocketUserMessage;
+			Console.WriteLine($"{message?.Channel.Name} {message?.Author.Username} {message}");
 
-			if (message.Content == "!ping")
-				await message.Channel.SendMessageAsync("pong!");
+			if (message?.Author.IsBot ?? true)
+			{
+				return;
+			}
+
+			var argPos = 0;
+			if (!(message.HasCharPrefix('!', ref argPos) || message.HasMentionPrefix(_client.CurrentUser, ref argPos)))
+			{
+				return;
+			}
+			
+			var context = new CommandContext(_client, message);
+			var result = await _commands.ExecuteAsync(context, argPos, _provider);
+
+			if (!result.IsSuccess)
+			{
+				await context.Channel.SendMessageAsync(result.ErrorReason);
+			}
 		}
 	}
 }
