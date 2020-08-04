@@ -1,57 +1,89 @@
 ﻿using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace BastionModerateApp
 {
 	internal class Program
 	{
-		private readonly DiscordSocketClient _client;
+		private static void Main(string[] args) => ConfigureHostBuilder(args).Build().Run();
+
+		public static IHostBuilder ConfigureHostBuilder(string[] args) => Host.CreateDefaultBuilder(args)
+			.ConfigureLogging(b => b.AddConsole())
+			.ConfigureServices((context, services) =>
+			{
+				services.AddHostedService<BotService>();
+			});
+	}
+	
+	internal class BotService : BackgroundService
+	{
+		private readonly IConfiguration _configuration;
+		private DiscordSocketClient _client;
+		private CommandService _commands;
+		private IServiceProvider _provider;
+
+		public BotService(IConfiguration configuration)
+		{
+			_configuration = configuration;
+		}
 		
-		private static void Main(string[] args)
+		protected override async Task ExecuteAsync(CancellationToken cancellationToken)
 		{
-			new Program().MainAsync().GetAwaiter().GetResult();
-		}
+			_provider = new ServiceCollection().BuildServiceProvider();
+			_commands = new CommandService();
+			await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
+			
+			_client = new DiscordSocketClient(new DiscordSocketConfig{LogLevel = LogSeverity.Info});
 
-		public Program()
-		{
-			_client = new DiscordSocketClient();
-
-			_client.Log += LogAsync;
-			_client.Ready += ReadyAsync;
+			_client.Log += x =>
+			{
+				Console.WriteLine($"{x.Message}, {x.Exception}");
+				return Task.CompletedTask;
+			};
+			
 			_client.MessageReceived += MessageReceivedAsync;
-		}
-
-		public async Task MainAsync()
-		{
+			
 			await _client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("DiscordToken"));
 			await _client.StartAsync();
-
-			await Task.Delay(Timeout.Infinite);
 		}
 
-		private Task LogAsync(LogMessage log)
+		public override async Task StopAsync(CancellationToken cancellationToken)
 		{
-			Console.WriteLine(log.ToString());
-			return Task.CompletedTask;
+			await _client.StopAsync();
 		}
-
-		private Task ReadyAsync()
+		
+		private async Task MessageReceivedAsync(SocketMessage messageParam)
 		{
-			Console.WriteLine($"{_client.CurrentUser} is connected!");
+			var message = messageParam as SocketUserMessage;
+			Console.WriteLine($"{message?.Channel.Name} {message?.Author.Username} {message}");
 
-			return Task.CompletedTask;
-		}
-
-		private async Task MessageReceivedAsync(SocketMessage message)
-		{
-			if (message.Author.Id == _client.CurrentUser.Id)
+			if (message?.Author.IsBot ?? true)
+			{
 				return;
+			}
 
-			if (message.Content == "!ping")
-				await message.Channel.SendMessageAsync("pong!");
+			var argPos = 0;
+			if (!(message.HasCharPrefix('!', ref argPos) || message.HasMentionPrefix(_client.CurrentUser, ref argPos)))
+			{
+				return;
+			}
+			
+			var context = new CommandContext(_client, message);
+			var result = await _commands.ExecuteAsync(context, argPos, _provider);
+
+			if (!result.IsSuccess)
+			{
+				await context.Channel.SendMessageAsync(result.ErrorReason);
+			}
 		}
 	}
 }
