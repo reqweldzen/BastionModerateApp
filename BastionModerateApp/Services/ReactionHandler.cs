@@ -15,7 +15,7 @@ namespace BastionModerateApp.Services
 		private readonly IServiceProvider _services;
 		private readonly BastionContext _context;
 		private readonly DiscordSocketClient _client;
-		private readonly IReadOnlyList<CharacterJob> _characterJobs;
+		private readonly IReadOnlyList<Job> _characterJobs;
 
 		public ReactionHandler(IServiceProvider services, BastionContext context, DiscordSocketClient client)
 		{
@@ -25,11 +25,11 @@ namespace BastionModerateApp.Services
 
 			_characterJobs = _context.CharacterJobs.ToList();
 			
-			_client.ReactionAdded += ClientOnReactionAdded;
-			_client.ReactionRemoved += ClientOnReactionRemoved;
+			_client.ReactionAdded += ReactionAdded;
+			_client.ReactionRemoved += ReactionRemoved;
 		}
 
-		private async Task ClientOnReactionAdded(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel,
+		private async Task ReactionAdded(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel,
 			SocketReaction reaction)
 		{
 			if (!reaction.User.IsSpecified) return;
@@ -46,6 +46,7 @@ namespace BastionModerateApp.Services
 						if (_context.PartyInviteEntries.Any(x =>
 							x.PartyInviteId == invite.PartyInviteId && x.UserId == reaction.UserId))
 						{
+							await message.RemoveReactionAsync(reaction.Emote, reaction.UserId);
 							return;
 						}
 
@@ -58,7 +59,7 @@ namespace BastionModerateApp.Services
 								PartyInviteId = invite.PartyInviteId,
 								ReactionName = reaction.Emote.Name,
 								UserId = reaction.UserId,
-								CharacterJobId = job.CharacterJobId
+								CharacterJobId = job.JobId
 							};
 
 							await _context.PartyInviteEntries.AddAsync(entry);
@@ -76,7 +77,7 @@ namespace BastionModerateApp.Services
 			}
 		}
 
-		private async Task ClientOnReactionRemoved(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel,
+		private async Task ReactionRemoved(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel,
 			SocketReaction reaction)
 		{
 			if (!reaction.User.IsSpecified) return;
@@ -90,6 +91,8 @@ namespace BastionModerateApp.Services
 					var invite = await _context.PartyInvites.FindAsync(inviteId);
 					if (invite != null)
 					{
+						if (invite.IsFinished) return;
+						
 						var entry = await _context.PartyInviteEntries
 							.FirstOrDefaultAsync(x =>
 								x.PartyInviteId == invite.PartyInviteId &&

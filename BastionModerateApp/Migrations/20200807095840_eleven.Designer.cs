@@ -3,15 +3,17 @@ using System;
 using BastionModerateApp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace BastionModerateApp.Migrations
 {
     [DbContext(typeof(BastionContext))]
-    partial class BastionContextModelSnapshot : ModelSnapshot
+    [Migration("20200807095840_eleven")]
+    partial class eleven
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -19,11 +21,11 @@ namespace BastionModerateApp.Migrations
                 .HasAnnotation("ProductVersion", "3.1.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            modelBuilder.Entity("BastionModerateApp.Models.Job", b =>
+            modelBuilder.Entity("BastionModerateApp.Models.CharacterJob", b =>
                 {
-                    b.Property<int>("JobId")
+                    b.Property<int>("CharacterJobId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnName("job_id")
+                        .HasColumnName("character_job_id")
                         .HasColumnType("integer")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
@@ -35,7 +37,7 @@ namespace BastionModerateApp.Migrations
                         .HasColumnName("reaction_name")
                         .HasColumnType("text");
 
-                    b.HasKey("JobId")
+                    b.HasKey("CharacterJobId")
                         .HasName("pk_character_jobs");
 
                     b.ToTable("character_jobs");
@@ -48,10 +50,6 @@ namespace BastionModerateApp.Migrations
                         .HasColumnName("party_invite_id")
                         .HasColumnType("integer")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
-
-                    b.Property<bool>("IsFinished")
-                        .HasColumnName("is_finished")
-                        .HasColumnType("boolean");
 
                     b.Property<decimal>("MessageId")
                         .HasColumnName("message_id")
@@ -139,28 +137,6 @@ namespace BastionModerateApp.Migrations
                         .HasName("pk_raid_templates");
 
                     b.ToTable("raid_templates");
-                });
-
-            modelBuilder.Entity("BastionModerateApp.Models.User", b =>
-                {
-                    b.Property<int>("UserId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnName("user_id")
-                        .HasColumnType("integer")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
-
-                    b.Property<decimal>("DiscordUserId")
-                        .HasColumnName("discord_user_id")
-                        .HasColumnType("numeric(20,0)");
-
-                    b.Property<string>("PlayerName")
-                        .HasColumnName("player_name")
-                        .HasColumnType("text");
-
-                    b.HasKey("UserId")
-                        .HasName("pk_users");
-
-                    b.ToTable("users");
                 });
 
             modelBuilder.Entity("BastionModerateApp.Models.PartyInvite", b =>

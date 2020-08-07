@@ -13,7 +13,9 @@ namespace BastionModerateApp
 		public DbSet<PartyInvite> PartyInvites { get; set; }
 		public DbSet<PartyInviteEntry> PartyInviteEntries { get; set; }
 		
-		public DbSet<CharacterJob> CharacterJobs { get; set; }
+		public DbSet<User> Users { get; set; }
+		
+		public DbSet<Job> CharacterJobs { get; set; }
 
 		public BastionContext()
 		{

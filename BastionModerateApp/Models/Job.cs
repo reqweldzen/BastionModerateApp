@@ -1,8 +1,8 @@
 ﻿namespace BastionModerateApp.Models
 {
-	public class CharacterJob
+	public class Job
 	{
-		public int CharacterJobId { get; set; }
+		public int JobId { get; set; }
 		
 		public string JobName { get; set; }
 		

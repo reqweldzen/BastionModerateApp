@@ -89,7 +89,8 @@ namespace BastionModerateApp
 			}
 
 			var argPos = 0;
-			if (!(message.HasCharPrefix('!', ref argPos) || message.HasMentionPrefix(_client.CurrentUser, ref argPos)))
+			var prefix = _configuration.GetValue<string>("Prefix");
+			if (!(message.HasStringPrefix(prefix, ref argPos) || message.HasMentionPrefix(_client.CurrentUser, ref argPos)))
 			{
 				return;
 			}
