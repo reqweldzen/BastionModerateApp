@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using BastionModerateApp.Models;
+using BastionModerateApp.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 // ReSharper disable UnusedAutoPropertyAccessor.Global

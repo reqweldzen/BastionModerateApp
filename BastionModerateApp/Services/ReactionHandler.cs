@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BastionModerateApp.Entities;
 using BastionModerateApp.Enums;
-using BastionModerateApp.Models;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;

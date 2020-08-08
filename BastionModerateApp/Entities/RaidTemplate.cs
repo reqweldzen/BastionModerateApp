@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace BastionModerateApp.Models
+﻿namespace BastionModerateApp.Entities
 {
 	public class RaidTemplate
 	{

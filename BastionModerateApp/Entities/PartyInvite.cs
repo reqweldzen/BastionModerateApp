@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using BastionModerateApp.Enums;
 
-namespace BastionModerateApp.Models
+namespace BastionModerateApp.Entities
 {
 	public class PartyInvite
 	{

@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using BastionModerateApp.Entities;
 using BastionModerateApp.Models;
 using Discord.Commands;
 using Microsoft.Extensions.Configuration;
@@ -24,62 +25,78 @@ namespace BastionModerateApp.Modules
 			_configuration = configuration;
 			_db = db;
 		}
-		
+
+		/// <summary>
+		/// プレイヤー登録
+		/// </summary>
+		/// <param name="id"></param>
+		/// <returns></returns>
 		[Command("register")]
 		public async Task RegisterAsync(int id)
 		{
-			var portal = _configuration.GetValue<string>("Portal");
-			var baseUrl = _configuration.GetValue<string>("API");
-			var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/character/{id}");
-			var client = _clientFactory.CreateClient();
-			var response = await client.SendAsync(request);
+			var character = await GetCharacterAsync(_clientFactory, _configuration, id);
+			if (character == null)
+				return;
 
-			if (!response.IsSuccessStatusCode) return;
-			
-			var content = await response.Content.ReadAsStringAsync();
-			var json = JsonSerializer.Deserialize<dynamic>(content);
-
-			var name = json["Character"]["Name"];
-			var characterId = (long) json["Character"]["ID"];
-
-			using (var transaction = await _db.Database.BeginTransactionAsync())
+			if (_db.Users.Any(x => x.DiscordId == Context.User.Id))
 			{
-				try
-				{
-					if (_db.Users.Any(x => x.DiscordId == Context.User.Id))
-					{
-						await transaction.RollbackAsync();
-						await ReplyAsync("It has already been registered.");
-						return;
-					}
-
-					var entity = new User
-					{
-						DiscordId = Context.User.Id,
-						PlayerName = name,
-						PlayerId = characterId
-					};
-
-					await _db.AddAsync(entity);
-
-					await _db.SaveChangesAsync();
-
-					await transaction.CommitAsync();
-				}
-				catch (Exception e)
-				{
-					await transaction.RollbackAsync();
-					throw;
-				}
+				await ReplyAsync("It has already been registered.");
+				return;
 			}
-			
+
+			var entity = new User
+			{
+				DiscordId = Context.User.Id,
+				PlayerName = character.Character.Name,
+				PlayerId = character.Character.ID
+			};
+
+			await _db.AddAsync(entity);
+
+			await _db.SaveChangesAsync();
+
 			var builder = new StringBuilder()
 				.AppendLine("Your registration is complete.")
-				.AppendLine($"ID: {characterId} {name}");
+				.AppendLine($"ID: {character.Character.ID} {character.Character.Name}");
 
 			await ReplyAsync(builder.ToString());
 		}
 
+		/// <summary>
+		/// プレイヤー変更
+		/// </summary>
+		/// <param name="id"></param>
+		/// <returns></returns>
+		[Command("change")]
+		public async Task ChangeAsync(int id)
+		{
+			var user = await _db.Users.FirstOrDefaultAsync(x => x.DiscordId == Context.User.Id);
+			if (user == null)
+			{
+				await ReplyAsync("You are not registered.");
+				return;
+			}
+
+			var character = await GetCharacterAsync(_clientFactory, _configuration, id);
+			if (character == null)
+				return;
+
+			user.PlayerId = character.Character.ID;
+			user.PlayerName = character.Character.Name;
+
+			await _db.SaveChangesAsync();
+
+			var builder = new StringBuilder()
+				.AppendLine("Your registration is complete.")
+				.AppendLine($"ID: {character.Character.ID} {character.Character.Name}");
+
+			await ReplyAsync(builder.ToString());
+		}
+
+		/// <summary>
+		/// プレイヤー登録解除
+		/// </summary>
+		/// <returns></returns>
 		[Command("unregister")]
 		public async Task UnregisterAsync()
 		{
@@ -90,24 +107,25 @@ namespace BastionModerateApp.Modules
 				return;
 			}
 
-			using (var transaction = await _db.Database.BeginTransactionAsync())
-			{
-				try
-				{
-					_db.Users.Remove(user);
+			_db.Users.Remove(user);
 
-					await _db.SaveChangesAsync();
-
-					await transaction.CommitAsync();
-				}
-				catch (Exception)
-				{
-					await transaction.RollbackAsync();
-					throw;
-				}
-			}
+			await _db.SaveChangesAsync();
 
 			await ReplyAsync("The deletion is complete.");
+		}
+		
+		private static async Task<GameCharacter> GetCharacterAsync(IHttpClientFactory factory,
+			IConfiguration configuration, int id)
+		{
+			var baseUri = configuration.GetValue<string>("API");
+			var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUri}/character/{id}");
+			var client = factory.CreateClient();
+			var response = await client.SendAsync(request);
+
+			if (!response.IsSuccessStatusCode) return null;
+
+			var content = await response.Content.ReadAsStringAsync();
+			return JsonSerializer.Deserialize<GameCharacter>(content);
 		}
 	}
 }

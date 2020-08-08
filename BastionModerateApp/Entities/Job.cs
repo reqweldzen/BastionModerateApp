@@ -1,4 +1,4 @@
-﻿namespace BastionModerateApp.Models
+﻿namespace BastionModerateApp.Entities
 {
 	public class Job
 	{
