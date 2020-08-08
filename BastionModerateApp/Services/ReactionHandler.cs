@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BastionModerateApp.Enums;
@@ -12,14 +11,12 @@ namespace BastionModerateApp.Services
 {
 	public class ReactionHandler
 	{
-		private readonly IServiceProvider _services;
 		private readonly BastionContext _context;
 		private readonly DiscordSocketClient _client;
 		private readonly IReadOnlyList<Job> _characterJobs;
 
-		public ReactionHandler(IServiceProvider services, BastionContext context, DiscordSocketClient client)
+		public ReactionHandler(BastionContext context, DiscordSocketClient client)
 		{
-			_services = services;
 			_context = context;
 			_client = client;
 
