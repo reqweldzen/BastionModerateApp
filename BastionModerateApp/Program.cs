@@ -47,6 +47,7 @@ namespace BastionModerateApp
 			var services = ConfigureServices();
 			services.GetRequiredService<LogService>();
 			await services.GetRequiredService<CommandHandlingService>().InstallCommandsAsync(services);
+			services.GetRequiredService<ReactionHandler>();
 			
 			await _client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("DiscordToken"));
 			await _client.StartAsync();

@@ -114,7 +114,7 @@ namespace BastionModerateApp.Modules
 			await ReplyAsync("The deletion is complete.");
 		}
 		
-		private static async Task<GameCharacter> GetCharacterAsync(IHttpClientFactory factory,
+		private static async Task<GameCharacter?> GetCharacterAsync(IHttpClientFactory factory,
 			IConfiguration configuration, int id)
 		{
 			var baseUri = configuration.GetValue<string>("API");

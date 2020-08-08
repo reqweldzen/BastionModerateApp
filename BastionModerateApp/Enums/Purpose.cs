@@ -3,10 +3,22 @@ using System.ComponentModel;
 
 namespace BastionModerateApp.Enums
 {
+	/// <summary>
+	/// 目的
+	/// </summary>
 	public enum Purpose
 	{
+		/// <summary>
+		/// 練習
+		/// </summary>
 		Practice = 1,
+		/// <summary>
+		/// コンプリート目的
+		/// </summary>
 		Complete = 2,
+		/// <summary>
+		/// 周回
+		/// </summary>
 		Lap = 3
 	}
 

@@ -3,20 +3,24 @@ using BastionModerateApp.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 // ReSharper disable UnusedAutoPropertyAccessor.Global
+#pragma warning disable 8618
 
 namespace BastionModerateApp
 {
 	public class BastionContext : DbContext
 	{
 		public static bool IsMigration { get; set; } = true;
-		
-		public DbSet<RaidTemplate> RaidTemplates { get; set; }
-		public DbSet<PartyInvite> PartyInvites { get; set; }
-		public DbSet<PartyInviteEntry> PartyInviteEntries { get; set; }
-		
+
 		public DbSet<User> Users { get; set; }
 		
-		public DbSet<Job> CharacterJobs { get; set; }
+		public DbSet<Job> Jobs { get; set; }
+		
+		public DbSet<ContentTemplate> ContentTemplates { get; set; }
+		
+		public DbSet<ContentType> ContentTypes { get; set; }
+
+		public DbSet<PartyInvite> PartyInvites { get; set; }
+		public DbSet<PartyInviteEntry> PartyInviteEntries { get; set; }
 
 		public BastionContext()
 		{
@@ -43,7 +47,7 @@ namespace BastionModerateApp
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
-			modelBuilder.Entity<PartyInviteEntry>().HasKey(x => new {x.PartyInviteId, x.PartyInviteEntryId});
+			modelBuilder.Entity<PartyInviteEntry>().HasKey(x => new {x.PartyInviteEntryId});
 
 			modelBuilder.Entity<PartyInviteEntry>()
 				.HasOne(x => x.PartyInvite)

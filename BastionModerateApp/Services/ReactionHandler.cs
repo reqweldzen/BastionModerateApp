@@ -11,17 +11,14 @@ namespace BastionModerateApp.Services
 {
 	public class ReactionHandler
 	{
-		private readonly BastionContext _context;
+		private readonly BastionContext _db;
 		private readonly DiscordSocketClient _client;
-		private readonly IReadOnlyList<Job> _characterJobs;
 
-		public ReactionHandler(BastionContext context, DiscordSocketClient client)
+		public ReactionHandler(DiscordSocketClient client, BastionContext db)
 		{
-			_context = context;
+			_db = db;
 			_client = client;
 
-			_characterJobs = _context.CharacterJobs.ToList();
-			
 			_client.ReactionAdded += ReactionAdded;
 			_client.ReactionRemoved += ReactionRemoved;
 		}
@@ -31,46 +28,57 @@ namespace BastionModerateApp.Services
 		{
 			if (!reaction.User.IsSpecified) return;
 
-			var message = await cache.DownloadAsync();
-			if (message.Embeds.Any())
+			var user = await _db.Users.FirstOrDefaultAsync(x => x.DiscordId == reaction.UserId);
+			if (user == null)
 			{
-				var embed = message.Embeds.First();
-				if (int.TryParse(embed.Description[1..], out var inviteId))
+				await channel.SendMessageAsync("You are not registered.");
+				return;
+			}
+
+			var job = await _db.Jobs.FirstOrDefaultAsync(x => x.ShortcutName == reaction.Emote.Name);
+			if (job == null)
+			{
+				return;
+			}
+
+			var message = await cache.DownloadAsync();
+			var embeds = message.Embeds.ToList();
+			if (embeds.Any())
+			{
+				var first = embeds[0];
+				if (!int.TryParse(first.Description[1..], out var inviteId))
 				{
-					var invite = await _context.PartyInvites.FindAsync(inviteId);
-					if (invite != null)
-					{
-						if (_context.PartyInviteEntries.Any(x =>
-							x.PartyInviteId == invite.PartyInviteId && x.UserId == reaction.UserId))
-						{
-							await message.RemoveReactionAsync(reaction.Emote, reaction.UserId);
-							return;
-						}
-
-						if (_characterJobs.Any(x => x.ReactionName == reaction.Emote.Name))
-						{
-							var job = _characterJobs.First(x => x.ReactionName == reaction.Emote.Name);
-							
-							var entry = new PartyInviteEntry
-							{
-								PartyInviteId = invite.PartyInviteId,
-								ReactionName = reaction.Emote.Name,
-								UserId = reaction.UserId,
-								CharacterJobId = job.JobId
-							};
-
-							await _context.PartyInviteEntries.AddAsync(entry);
-							await _context.SaveChangesAsync();
-
-							var user = await channel.GetUserAsync(invite.UserId);
-
-							await message.ModifyAsync(properties =>
-							{
-								properties.Embed = CreateEmbed(message, invite, user);
-							});
-						}
-					}
+					await channel.SendMessageAsync("Unable to get the invitation ID.");
+					return;
 				}
+
+				var invite = await _db.PartyInvites.FindAsync(inviteId);
+				if (invite == null)
+				{
+					await channel.SendMessageAsync("The invitation ID is invalid.");
+					return;
+				}
+
+				// if (invite.PartyInviteEntries.Any(x => x.User.DiscordId == reaction.UserId))
+				// {
+				// 	await message.RemoveReactionAsync(reaction.Emote, reaction.UserId,
+				// 		new RequestOptions {RetryMode = RetryMode.RetryRatelimit});
+				// 	return;
+				// }
+
+				var entry = new PartyInviteEntry
+				{
+					PartyInviteId = invite.PartyInviteId,
+					JobId = job.JobId,
+					UserId = user.UserId,
+				};
+
+				await _db.PartyInviteEntries.AddAsync(entry);
+				await _db.SaveChangesAsync();
+
+				var inviter = await channel.GetUserAsync(invite.User.DiscordId);
+
+				await message.ModifyAsync(properties => { properties.Embed = CreateEmbed(invite, inviter); });
 			}
 		}
 
@@ -79,48 +87,62 @@ namespace BastionModerateApp.Services
 		{
 			if (!reaction.User.IsSpecified) return;
 
-			var message = await cache.DownloadAsync();
-			if (message.Embeds.Any())
+			var user = await _db.Users.FirstOrDefaultAsync(x => x.DiscordId == reaction.UserId);
+			if (user == null)
 			{
-				var embed = message.Embeds.First();
-				if (int.TryParse(embed.Description[1..], out var inviteId))
+				await channel.SendMessageAsync("You are not registered.");
+				return;
+			}
+
+			var job = await _db.Jobs.FirstOrDefaultAsync(x => x.ShortcutName == reaction.Emote.Name);
+			if (job == null)
+			{
+				return;
+			}
+
+			var message = await cache.DownloadAsync();
+			var embeds = message.Embeds.ToList();
+			if (embeds.Any())
+			{
+				var first = embeds[0];
+
+				if (!int.TryParse(first.Description[1..], out var inviteId))
 				{
-					var invite = await _context.PartyInvites.FindAsync(inviteId);
-					if (invite != null)
-					{
-						if (invite.IsFinished) return;
-						
-						var entry = await _context.PartyInviteEntries
-							.FirstOrDefaultAsync(x =>
-								x.PartyInviteId == invite.PartyInviteId &&
-								x.UserId == reaction.UserId);
-						if (entry != null)
-						{
-							if (reaction.Emote.Name == entry.ReactionName)
-							{
-								_context.PartyInviteEntries.Remove(entry);
-								await _context.SaveChangesAsync();
+					await channel.SendMessageAsync("Unable to get the invitation ID.");
+					return;
+				}
 
-								var user = await channel.GetUserAsync(invite.UserId);
+				var invite = await _db.PartyInvites.FindAsync(inviteId);
+				if (invite == null)
+				{
+					await channel.SendMessageAsync("The invitation ID is invalid.");
+					return;
+				}
 
-								await message.ModifyAsync(properties =>
-								{
-									properties.Embed = CreateEmbed(message, invite, user);
-								});
-							}
-						}
-					}
+				if (invite.IsFinished) return;
+
+				var entry = invite.PartyInviteEntries.FirstOrDefault(x => x.UserId == user.UserId);
+				if (entry == null) return;
+
+				if (entry.JobId == job.JobId)
+				{
+					_db.PartyInviteEntries.Remove(entry);
+					await _db.SaveChangesAsync();
+
+					var inviter = await channel.GetUserAsync(invite.User.DiscordId);
+
+					await message.ModifyAsync(properties => { properties.Embed = CreateEmbed(invite, inviter); });
 				}
 			}
 		}
 
-		private Embed CreateEmbed(IUserMessage message, PartyInvite invite, IUser user)
+		private Embed CreateEmbed(PartyInvite invite, IUser inviter)
 		{
-			var template = invite.RaidTemplate;
-			var contentName = !string.IsNullOrEmpty(template.QuestUrl)
-				? $"[{template.RaidName}]({template.QuestUrl})"
-				: template.RaidName;
+			var template = invite.ContentTemplate;
 
+			var contentName = !string.IsNullOrEmpty(template.QuestUrl)
+				? $"[{template.ContentName}]({template.QuestUrl})"
+				: template.ContentName;
 			return new EmbedBuilder
 				{
 					Title = "パーティ募集",
@@ -128,13 +150,22 @@ namespace BastionModerateApp.Services
 				}
 				.AddField(builder =>
 				{
-					builder.Name = "高難易度コンテンツ";
+					builder.Name = template.ContentType.TypeName;
 					builder.Value = contentName;
 				})
-				.AddField("目的", invite.Purpose.DisplayName(), true)
-				.AddField("開始日時", invite.StartDate.ToString("yyyy/MM/dd HH:mm"), true)
-				.AddField("参加人数", $"{invite.PartyInviteEntries.Count}/8 人", true)
-				.WithAuthor(user)
+				.WithFields(
+					new EmbedFieldBuilder().WithName("目的").WithValue(invite.Purpose.DisplayName()).WithIsInline(true),
+					new EmbedFieldBuilder().WithName("参加人数").WithValue($"{invite.PartyInviteEntries.Count}/8 人")
+						.WithIsInline(true),
+					new EmbedFieldBuilder().WithName("\u200b").WithValue("\u200b")
+				)
+				.WithFields(
+					new EmbedFieldBuilder().WithName("開始日時").WithValue(invite.StartDate.ToString("yyyy/MM/dd HH:mm"))
+						.WithIsInline(true),
+					new EmbedFieldBuilder().WithName("終了日時")
+						.WithValue(invite.EndDate?.ToString("yyyy/MM/dd HH:mm") ?? "N/A").WithIsInline(true)
+				)
+				.WithAuthor(inviter)
 				.WithColor(Color.Purple)
 				.WithCurrentTimestamp()
 				.Build();
