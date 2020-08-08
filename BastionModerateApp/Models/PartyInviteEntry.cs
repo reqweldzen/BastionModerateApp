@@ -4,10 +4,10 @@ namespace BastionModerateApp.Models
 {
 	public class PartyInviteEntry
 	{
-		public int PartyInviteEntryId { get; set; }
-		
 		public int PartyInviteId { get; set; }
 		
+		public int PartyInviteEntryId { get; set; }
+
 		public int CharacterJobId { get; set; }
 		
 		public ulong UserId { get; set; }

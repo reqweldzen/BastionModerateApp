@@ -28,7 +28,7 @@ namespace BastionModerateApp.Services
 			_provider = provider;
 			_configuration = provider.GetService<IConfiguration>();
 
-			await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), services: null);
+			await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), provider);
 		}
 		
 		private async Task MessageReceivedAsync(SocketMessage messageParam)

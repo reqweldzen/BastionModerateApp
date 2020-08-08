@@ -60,9 +60,16 @@ namespace BastionModerateApp
 		private IServiceProvider ConfigureServices()
 		{
 			return new ServiceCollection()
+				.AddHttpClient()
 				.AddSingleton(_client)
 				.AddSingleton<CommandService>()
 				.AddSingleton<CommandHandlingService>()
+				// Log service
+				.AddLogging(opt =>
+				{
+					opt.AddConsole();
+				})
+				.AddSingleton<LogService>()
 				// Extra
 				.AddSingleton(_configuration)
 				// Add additional services here...

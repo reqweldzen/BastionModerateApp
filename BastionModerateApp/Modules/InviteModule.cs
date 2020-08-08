@@ -1,29 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using BastionModerateApp.Enums;
 using BastionModerateApp.Models;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
 
-namespace BastionModerateApp.Commands
+namespace BastionModerateApp.Modules
 {
 	public class InviteModule : ModuleBase
 	{
-		private readonly DiscordSocketClient _client;
 		private readonly BastionContext _db;
 
 		public InviteModule(DiscordSocketClient client, BastionContext db)
 		{
-			_client = client;
 			_db = db;
 		}
 
@@ -124,7 +117,7 @@ namespace BastionModerateApp.Commands
 				.Join(
 					_db.Users.ToList(),
 					t =>t.p.UserId,
-					t => t.DiscordUserId,
+					t => t.DiscordId,
 					(t, u) => new {t.p, t.j, u})
 				.ToList();
 			

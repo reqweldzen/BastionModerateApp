@@ -2,6 +2,7 @@
 using BastionModerateApp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+// ReSharper disable UnusedAutoPropertyAccessor.Global
 
 namespace BastionModerateApp
 {
@@ -34,10 +35,20 @@ namespace BastionModerateApp
 					.AddJsonFile($"appsettings.json", optional: false)
 					.Build();
 				
-				optionsBuilder.UseNpgsql(configuration.GetConnectionString($"Default"));
+				optionsBuilder.UseNpgsql(configuration.GetConnectionString("Default"));
 				optionsBuilder.UseLazyLoadingProxies();
 				optionsBuilder.UseSnakeCaseNamingConvention();
 			}
+		}
+
+		protected override void OnModelCreating(ModelBuilder modelBuilder)
+		{
+			modelBuilder.Entity<PartyInviteEntry>().HasKey(x => new {x.PartyInviteId, x.PartyInviteEntryId});
+
+			modelBuilder.Entity<PartyInviteEntry>()
+				.HasOne(x => x.PartyInvite)
+				.WithMany(x => x.PartyInviteEntries)
+				.HasForeignKey(x => x.PartyInviteId);
 		}
 	}
 }

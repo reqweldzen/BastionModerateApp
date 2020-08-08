@@ -3,15 +3,17 @@ using System;
 using BastionModerateApp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace BastionModerateApp.Migrations
 {
     [DbContext(typeof(BastionContext))]
-    partial class BastionContextModelSnapshot : ModelSnapshot
+    [Migration("20200808025732_fifteen")]
+    partial class fifteen
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -148,9 +150,9 @@ namespace BastionModerateApp.Migrations
                         .HasColumnName("discord_id")
                         .HasColumnType("numeric(20,0)");
 
-                    b.Property<long>("PlayerId")
+                    b.Property<int>("PlayerId")
                         .HasColumnName("player_id")
-                        .HasColumnType("bigint");
+                        .HasColumnType("integer");
 
                     b.Property<string>("PlayerName")
                         .HasColumnName("player_name")
