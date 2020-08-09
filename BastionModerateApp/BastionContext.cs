@@ -52,7 +52,8 @@ namespace BastionModerateApp
 			modelBuilder.Entity<PartyInviteEntry>()
 				.HasOne(x => x.PartyInvite)
 				.WithMany(x => x.PartyInviteEntries)
-				.HasForeignKey(x => x.PartyInviteId);
+				.HasForeignKey(x => x.PartyInviteId)
+				.OnDelete(DeleteBehavior.Cascade);
 		}
 	}
 }

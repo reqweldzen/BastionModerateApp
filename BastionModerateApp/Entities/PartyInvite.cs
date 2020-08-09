@@ -30,6 +30,11 @@ namespace BastionModerateApp.Entities
 		public ulong MessageId { get; set; }
 		
 		/// <summary>
+		/// 参加者リストID
+		/// </summary>
+		public ulong MemberListMessageId { get; set; }
+		
+		/// <summary>
 		/// コンテンツテンプレートID
 		/// </summary>
 		public int ContentTemplateId { get; set; }
@@ -67,6 +72,6 @@ namespace BastionModerateApp.Entities
 		/// <summary>
 		/// パーティ募集エントリー
 		/// </summary>
-		public virtual ICollection<PartyInviteEntry> PartyInviteEntries { get; set; }
+		public virtual List<PartyInviteEntry> PartyInviteEntries { get; set; }
 	}
 }

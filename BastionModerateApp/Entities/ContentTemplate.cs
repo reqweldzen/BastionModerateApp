@@ -36,8 +36,23 @@ namespace BastionModerateApp.Entities
 		public string ShortcutName { get; set; }
 		
 		/// <summary>
+		/// 参加可能人数
+		/// </summary>
+		public int MaxPlayer { get; set; }
+		
+		/// <summary>
 		/// コンテンツ種別
 		/// </summary>
 		public virtual ContentType ContentType { get; set; }
+
+		public string GetQuestName()
+		{
+			if (!string.IsNullOrEmpty(QuestUrl))
+			{
+				return $"[{ContentName}]({QuestUrl})";
+			}
+
+			return ContentName;
+		}
 	}
 }

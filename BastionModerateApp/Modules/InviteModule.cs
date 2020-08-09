@@ -47,10 +47,20 @@ namespace BastionModerateApp.Modules
 				.Build();
 		}
 
+		/// <summary>
+		/// パーティ募集を作成する。
+		/// </summary>
+		/// <param name="shortcutName"></param>
+		/// <param name="purpose"></param>
+		/// <param name="startDate"></param>
+		/// <param name="endDate"></param>
+		/// <returns></returns>
 		[Command("create")]
-		public async Task Invite(string? shortcutName = null, int purpose = 1, DateTime? startDate = null,
+		public async Task CreateInviteAsync(string? shortcutName = null, int purpose = 1, DateTime? startDate = null,
 			DateTime? endDate = null)
 		{
+			await using var transaction = await _db.Database.BeginTransactionAsync();
+			
 			var template = _db.ContentTemplates.FirstOrDefault(x => x.ShortcutName == shortcutName);
 			if (template == null) return;
 
@@ -72,19 +82,42 @@ namespace BastionModerateApp.Modules
 
 			await _db.PartyInvites.AddAsync(invite);
 			await _db.SaveChangesAsync();
+			
+			var inviteEmbed = new InviteEmbedWrapper
+			{
+				InviteId = invite.PartyInviteId,
+				ContentType = invite.ContentTemplate.ContentType.TypeName,
+				ContentName = invite.ContentTemplate.GetQuestName(),
+				Purpose = invite.Purpose.DisplayName(),
+				MaxPlayer = invite.ContentTemplate.MaxPlayer,
+				StartDate = startDate,
+				EndDate = endDate,
+				Inviter = Context.User,
+			};
 
-			var embed = CreateEmbed(template, invite);
-
-			var inviteMessage = await ReplyAsync(embed: embed);
-
+			var inviteMessage = await ReplyAsync(embed: inviteEmbed.ToEmbed());
+			var memberMessage = await ReplyAsync("参加者 \uD83D\uDCCC");
+			
 			invite.MessageId = inviteMessage.Id;
+			invite.MemberListMessageId = memberMessage.Id;
 			_db.PartyInvites.Update(invite);
 			await _db.SaveChangesAsync();
+
+			await Context.Message.DeleteAsync();
+
+			await transaction.CommitAsync();
 		}
 
+		/// <summary>
+		/// パーティ募集を終了する。
+		/// </summary>
+		/// <param name="id"></param>
+		/// <returns></returns>
 		[Command("finish")]
-		public async Task InviteFinish(int id)
+		public async Task FinishInviteAsync(int id)
 		{
+			await using var transaction = await _db.Database.BeginTransactionAsync();
+			
 			var invite = await _db.PartyInvites.FindAsync(id);
 			if (invite == null) return;
 
@@ -94,14 +127,21 @@ namespace BastionModerateApp.Modules
 			var inviter = await Context.Channel.GetUserAsync(invite.User.DiscordId);
 			if (inviter == null) return;
 
+			var embed = message.Embeds.ToList()[0];
+			var inviteEmbed = new InviteEmbedWrapper(embed.ToEmbedBuilder());
+
 			invite.IsFinished = true;
 			_db.PartyInvites.Update(invite);
 			await _db.SaveChangesAsync();
 
+			inviteEmbed.Title += "(終了)";
+			
 			await message.ModifyAsync(properties =>
 			{
-				properties.Embed = CreateFinishEmbed(message, invite, inviter).Build();
+				properties.Embed = inviteEmbed.ToEmbed();
 			});
+
+			await transaction.CommitAsync();
 		}
 
 		[Command("show")]
@@ -113,32 +153,20 @@ namespace BastionModerateApp.Modules
 			var jobs = _db.Jobs.ToList();
 			var emotes = Context.Guild.Emotes.Where(x => jobs.Select(y => y.ShortcutName).Contains(x.Name)).ToList();
 
-			var party = invite.PartyInviteEntries
-				.Join(
-					jobs,
-					t => t.JobId,
-					t => t.JobId,
-					(p, j) => new {p, j}
-				)
-				.Join(
-					_db.Users.ToList(),
-					t => t.p.User.DiscordId,
-					t => t.DiscordId,
-					(t, u) => new {t.p, t.j, u})
-				.ToList();
+			var entries = invite.PartyInviteEntries.ToList();
 
 			var builder = new StringBuilder();
 			builder.AppendLine($"#{invite.PartyInviteId} {invite.ContentTemplate.ContentName}");
-			foreach (var (entry, job, user) in party.Select(x => (x.p, x.j, x.u)))
+			foreach (var entry in entries)
 			{
-				builder.AppendLine($"{emotes.FirstOrDefault(x => x.Name == job.ShortcutName)} {user.PlayerName}");
+				builder.AppendLine($"{emotes.FirstOrDefault(x => x.Name == entry.Job.ShortcutName)} {entry.User.PlayerName}");
 			}
 
 			await ReplyAsync(builder.ToString());
 		}
 
 		[Command("update")]
-		public async Task UpdateInviteData(int id)
+		public async Task UpdateInviteAsync(int id)
 		{
 			var invite = await _db.PartyInvites.FindAsync(id);
 			if (invite == null) return;
@@ -200,6 +228,37 @@ namespace BastionModerateApp.Modules
 			await ReplyAsync($"#{invite.PartyInviteId} synced!");
 		}
 
+		/// <summary>
+		/// パーティ募集を削除する
+		/// </summary>
+		/// <param name="id"></param>
+		/// <returns></returns>
+		[Command("delete")]
+		public async Task DeleteInviteAsync(int id)
+		{
+			await using var transaction = await _db.Database.BeginTransactionAsync();
+			
+			var invite = await _db.PartyInvites.FindAsync(id);
+			if (invite == null) return;
+			
+			var message = await Context.Channel.GetMessageAsync(invite.MessageId) as IUserMessage;
+			if (message?.Embeds.Any() != true)
+			{
+				await ReplyAsync($"The invitation message was not found.");
+				return;
+			}
+
+			_db.PartyInvites.Remove(invite);
+
+			await _db.SaveChangesAsync();
+
+			await message.DeleteAsync();
+
+			await Context.Message.DeleteAsync();
+			
+			await transaction.CommitAsync();
+		}
+		
 		private IEnumerable<GuildEmote> GetGuildEmotes(IEnumerable<Job> jobs) => Context.Guild.Emotes
 			.Where(x => jobs.Select(y => y.ShortcutName).Contains(x.Name)).ToList();
 

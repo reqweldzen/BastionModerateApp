@@ -3,15 +3,17 @@ using System;
 using BastionModerateApp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace BastionModerateApp.Migrations
 {
     [DbContext(typeof(BastionContext))]
-    partial class BastionContextModelSnapshot : ModelSnapshot
+    [Migration("20200809074513_second")]
+    partial class second
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,7 +38,7 @@ namespace BastionModerateApp.Migrations
                         .HasColumnName("content_type_id")
                         .HasColumnType("integer");
 
-                    b.Property<int>("MaxPlayer")
+                    b.Property<int?>("MaxPlayer")
                         .HasColumnName("max_player")
                         .HasColumnType("integer");
 
@@ -120,10 +122,6 @@ namespace BastionModerateApp.Migrations
                     b.Property<bool>("IsFinished")
                         .HasColumnName("is_finished")
                         .HasColumnType("boolean");
-
-                    b.Property<decimal>("MemberListMessageId")
-                        .HasColumnName("member_list_message_id")
-                        .HasColumnType("numeric(20,0)");
 
                     b.Property<decimal>("MessageId")
                         .HasColumnName("message_id")
