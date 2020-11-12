@@ -23,11 +23,11 @@ namespace BastionModerateApp.Entities
 		/// <summary>
 		/// プレイヤーID
 		/// </summary>
-		public long PlayerId { get; set; }
+		public long? PlayerId { get; set; }
 		
 		/// <summary>
 		/// プレイヤー名
 		/// </summary>
-		public string PlayerName { get; set; }
+		public string? PlayerName { get; set; }
 	}
 }

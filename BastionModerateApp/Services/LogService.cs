@@ -9,26 +9,30 @@ namespace BastionModerateApp.Services
 {
 	public class LogService
 	{
-		private readonly DiscordSocketClient _client;
-		private readonly CommandService _commands;
-		private readonly ILoggerFactory _loggerFactory;
 		private readonly ILogger _discordLogger;
 		private readonly ILogger _commandsLogger;
 		
+		/// <summary>
+		/// Discordのログをハンドリングします。
+		/// </summary>
+		/// <param name="client"></param>
+		/// <param name="commands"></param>
+		/// <param name="loggerFactory"></param>
 		public LogService(DiscordSocketClient client, CommandService commands, ILoggerFactory loggerFactory)
 		{
-			_client = client;
-			_commands = commands;
-			_loggerFactory = loggerFactory;
+			_discordLogger = loggerFactory.CreateLogger("discord");
+			_commandsLogger = loggerFactory.CreateLogger("commands");
 
-			_discordLogger = _loggerFactory.CreateLogger("discord");
-			_commandsLogger = _loggerFactory.CreateLogger("commands");
-
-			_client.Log += LogDiscord;
-			_commands.Log += LogCommand;
+			client.Log += LogDiscordTask;
+			commands.Log += LogCommandTask;
 		}
 
-		private Task LogDiscord(LogMessage message)
+		/// <summary>
+		/// Discordメッセージをログに書き込む。
+		/// </summary>
+		/// <param name="message"></param>
+		/// <returns></returns>
+		private Task LogDiscordTask(LogMessage message)
 		{
 			_discordLogger.Log(
 				LogLevelFromSeverity(message.Severity),
@@ -41,7 +45,12 @@ namespace BastionModerateApp.Services
 			return Task.CompletedTask;
 		}
 
-		private Task LogCommand(LogMessage message)
+		/// <summary>
+		/// Discordコマンドをログに書き込む。
+		/// </summary>
+		/// <param name="message"></param>
+		/// <returns></returns>
+		private Task LogCommandTask(LogMessage message)
 		{
 			if (message.Exception is CommandException command)
 			{

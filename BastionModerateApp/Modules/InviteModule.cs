@@ -6,20 +6,32 @@ using System.Threading.Tasks;
 using BastionModerateApp.Entities;
 using BastionModerateApp.Enums;
 using BastionModerateApp.Models;
+using BastionModerateApp.Services;
 using Discord;
 using Discord.Commands;
-using Discord.WebSocket;
+
+// ReSharper disable UnusedMember.Global
 
 namespace BastionModerateApp.Modules
 {
+	/// <summary>
+	/// パーティ募集モジュール
+	/// </summary>
 	[Group("invite")]
 	public class InviteModule : ModuleBase
 	{
 		private readonly BastionContext _db;
+		private readonly AccountService _accountService;
 
-		public InviteModule(DiscordSocketClient client, BastionContext db)
+		/// <summary>
+		/// コンストラクタ
+		/// </summary>
+		/// <param name="db"></param>
+		/// <param name="accountService"></param>
+		public InviteModule(BastionContext db, AccountService accountService)
 		{
 			_db = db;
+			_accountService = accountService;
 		}
 
 		private Embed CreateEmbed(ContentTemplate template, PartyInvite invite)
@@ -56,20 +68,28 @@ namespace BastionModerateApp.Modules
 		/// <param name="endDate"></param>
 		/// <returns></returns>
 		[Command("create")]
-		public async Task CreateInviteAsync(string? shortcutName = null, int purpose = 1, DateTime? startDate = null,
+		public async Task CreatePartyFinderAsync(string? shortcutName = null, int purpose = 1, DateTime? startDate = null,
 			DateTime? endDate = null)
 		{
+			bool IsRegisteredUser(User x) => x.DiscordId == Context.User.Id;
+
+			// トランザクション開始
 			await using var transaction = await _db.Database.BeginTransactionAsync();
-			
+
 			var template = _db.ContentTemplates.FirstOrDefault(x => x.ShortcutName == shortcutName);
 			if (template == null) return;
 
-			var user = await _db.Users.FirstOrDefaultAsync(x => x.DiscordId == Context.User.Id);
+			var user = await _db.Users.FirstOrDefaultAsync(IsRegisteredUser);
 			if (user == null)
 			{
-				await ReplyAsync("You are not registered.");
-				return;
+				if (!await _accountService.RegisterAsync(Context))
+				{
+					await ReplyAsync("You are not registered.");
+					return;
+				}
 			}
+
+			user = await _db.Users.FirstOrDefaultAsync(IsRegisteredUser);
 
 			var invite = new PartyInvite
 			{
@@ -82,7 +102,7 @@ namespace BastionModerateApp.Modules
 
 			await _db.PartyInvites.AddAsync(invite);
 			await _db.SaveChangesAsync();
-			
+
 			var inviteEmbed = new InviteEmbedWrapper
 			{
 				InviteId = invite.PartyInviteId,
@@ -97,7 +117,7 @@ namespace BastionModerateApp.Modules
 
 			var inviteMessage = await ReplyAsync(embed: inviteEmbed.ToEmbed());
 			var memberMessage = await ReplyAsync("参加者 \uD83D\uDCCC");
-			
+
 			invite.MessageId = inviteMessage.Id;
 			invite.MemberListMessageId = memberMessage.Id;
 			_db.PartyInvites.Update(invite);
@@ -117,7 +137,7 @@ namespace BastionModerateApp.Modules
 		public async Task FinishInviteAsync(int id)
 		{
 			await using var transaction = await _db.Database.BeginTransactionAsync();
-			
+
 			var invite = await _db.PartyInvites.FindAsync(id);
 			if (invite == null) return;
 
@@ -135,11 +155,8 @@ namespace BastionModerateApp.Modules
 			await _db.SaveChangesAsync();
 
 			inviteEmbed.Title += "(終了)";
-			
-			await message.ModifyAsync(properties =>
-			{
-				properties.Embed = inviteEmbed.ToEmbed();
-			});
+
+			await message.ModifyAsync(properties => { properties.Embed = inviteEmbed.ToEmbed(); });
 
 			await transaction.CommitAsync();
 		}
@@ -159,12 +176,18 @@ namespace BastionModerateApp.Modules
 			builder.AppendLine($"#{invite.PartyInviteId} {invite.ContentTemplate.ContentName}");
 			foreach (var entry in entries)
 			{
-				builder.AppendLine($"{emotes.FirstOrDefault(x => x.Name == entry.Job.ShortcutName)} {entry.User.PlayerName}");
+				builder.AppendLine(
+					$"{emotes.FirstOrDefault(x => x.Name == entry.Job.ShortcutName)} {entry.User.PlayerName}");
 			}
 
 			await ReplyAsync(builder.ToString());
 		}
 
+		/// <summary>
+		/// パーティ募集情報を更新する。
+		/// </summary>
+		/// <param name="id"></param>
+		/// <returns></returns>
 		[Command("update")]
 		public async Task UpdateInviteAsync(int id)
 		{
@@ -172,7 +195,7 @@ namespace BastionModerateApp.Modules
 			if (invite == null) return;
 
 			var inviter = invite.User;
-			
+
 			var message = await Context.Channel.GetMessageAsync(invite.MessageId) as IUserMessage;
 			if (message?.Embeds.Any() != true)
 			{
@@ -190,7 +213,7 @@ namespace BastionModerateApp.Modules
 					var entries = invite.PartyInviteEntries.ToList();
 					_db.PartyInviteEntries.RemoveRange(entries);
 					await _db.SaveChangesAsync();
-					
+
 					var emoteUsers = new List<EmoteUser>();
 					foreach (var emote in emotes)
 					{
@@ -212,7 +235,7 @@ namespace BastionModerateApp.Modules
 						});
 
 					await _db.AddRangeAsync(entities);
-					
+
 					await _db.SaveChangesAsync();
 
 					await transaction.CommitAsync();
@@ -237,10 +260,10 @@ namespace BastionModerateApp.Modules
 		public async Task DeleteInviteAsync(int id)
 		{
 			await using var transaction = await _db.Database.BeginTransactionAsync();
-			
+
 			var invite = await _db.PartyInvites.FindAsync(id);
 			if (invite == null) return;
-			
+
 			var message = await Context.Channel.GetMessageAsync(invite.MessageId) as IUserMessage;
 			if (message?.Embeds.Any() != true)
 			{
@@ -255,10 +278,10 @@ namespace BastionModerateApp.Modules
 			await message.DeleteAsync();
 
 			await Context.Message.DeleteAsync();
-			
+
 			await transaction.CommitAsync();
 		}
-		
+
 		private IEnumerable<GuildEmote> GetGuildEmotes(IEnumerable<Job> jobs) => Context.Guild.Emotes
 			.Where(x => jobs.Select(y => y.ShortcutName).Contains(x.Name)).ToList();
 

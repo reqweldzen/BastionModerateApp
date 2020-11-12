@@ -12,9 +12,14 @@ namespace BastionModerateApp.Services
 	{
 		private readonly DiscordSocketClient _client;
 		private readonly CommandService _commands;
-		private IServiceProvider _provider;
-		private IConfiguration _configuration;
+		private IServiceProvider? _provider;
+		private IConfiguration? _configuration;
 
+		/// <summary>
+		/// コンストラクタ
+		/// </summary>
+		/// <param name="client"></param>
+		/// <param name="commands"></param>
 		public CommandHandlingService(DiscordSocketClient client, CommandService commands)
 		{
 			_client = client;
@@ -31,11 +36,15 @@ namespace BastionModerateApp.Services
 			await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), provider);
 		}
 		
+		/// <summary>
+		/// メッセージ受信時
+		/// </summary>
+		/// <param name="messageParam"></param>
+		/// <returns></returns>
 		private async Task MessageReceivedAsync(SocketMessage messageParam)
 		{
 			var message = messageParam as SocketUserMessage;
-			Console.WriteLine($"{message?.Channel.Name} {message?.Author.Username} {message}");
-
+			// Console.WriteLine($"{message?.Channel.Name} {message?.Author.Username} {message}");
 			if (message?.Author.IsBot ?? true)
 			{
 				return;

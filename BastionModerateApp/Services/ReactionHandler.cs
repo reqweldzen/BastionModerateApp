@@ -10,17 +10,26 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.Extensions.Configuration;
 
 namespace BastionModerateApp.Services
 {
 	public class ReactionHandler
 	{
 		private readonly BastionContext _db;
+		private readonly IConfiguration _configuration;
 		private readonly DiscordSocketClient _client;
 
-		public ReactionHandler(DiscordSocketClient client, BastionContext db)
+		/// <summary>
+		/// MessageのReactionをハンドリングします。
+		/// </summary>
+		/// <param name="client"></param>
+		/// <param name="db"></param>
+		/// <param name="configuration"></param>
+		public ReactionHandler(DiscordSocketClient client, BastionContext db, IConfiguration configuration)
 		{
 			_db = db;
+			_configuration = configuration;
 			_client = client;
 
 			_client.ReactionAdded += ReactionAdded;
@@ -78,7 +87,7 @@ namespace BastionModerateApp.Services
 
 			await transaction.CommitAsync();
 		}
-
+		
 		/// <summary>
 		/// リアクション追加時
 		/// </summary>
@@ -91,6 +100,12 @@ namespace BastionModerateApp.Services
 		{
 			if (!reaction.User.IsSpecified) return;
 
+			if (channel.Id == _configuration.GetSection("ReactionChannel").GetValue<ulong>("Beginner"))
+			{
+				await OnAddBeginner(cache, channel, reaction);
+				return;
+			}
+			
 			await using var transaction = await _db.Database.BeginTransactionAsync();
 
 			var user = await _db.Users.FirstOrDefaultAsync(x => x.DiscordId == reaction.UserId);
@@ -166,6 +181,14 @@ namespace BastionModerateApp.Services
 		{
 			if (!reaction.User.IsSpecified) return;
 
+			if (channel.Id == _configuration.GetSection("ReactionChannel").GetValue<ulong>("Beginner"))
+			{
+				await OnRemoveBeginner(cache, channel, reaction);
+				return;
+			}
+
+			return;
+
 			await using var transaction = await _db.Database.BeginTransactionAsync();
 
 			var user = await _db.Users.FirstOrDefaultAsync(x => x.DiscordId == reaction.UserId);
@@ -223,5 +246,47 @@ namespace BastionModerateApp.Services
 
 			await transaction.CommitAsync();
 		}
+		
+		#region Put Mark (Beginner)
+		
+		private async Task OnAddBeginner(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel, SocketReaction reaction)
+		{
+			if (reaction.Emote.Name != "🔰")
+			{
+				return;
+			}
+			
+			if (reaction.User.Value is IGuildUser user)
+			{
+				var name = user.Nickname;
+				await user.ModifyAsync(guildUser =>
+				{
+					var before = name;
+					guildUser.Nickname = $"🔰{before}";
+				});
+			}
+		}
+
+		private async Task OnRemoveBeginner(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel,
+			SocketReaction reaction)
+		{
+			if (reaction.Emote.Name != "🔰")
+			{
+				return;
+			}
+
+			if (reaction.User.Value is IGuildUser user)
+			{
+				var name = user.Nickname;
+				await user.ModifyAsync(guildUser =>
+				{
+					var before = name;
+					var after = before.Replace("🔰", "");
+					guildUser.Nickname = $"{after}";
+				});
+			}
+		}
+		
+		#endregion
 	}
 }

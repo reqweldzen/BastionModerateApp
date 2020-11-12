@@ -65,6 +65,7 @@ namespace BastionModerateApp
 				.AddSingleton(_client)
 				.AddSingleton<CommandService>()
 				.AddSingleton<CommandHandlingService>()
+				.AddSingleton<AccountService>()
 				// Log service
 				.AddLogging(opt =>
 				{
