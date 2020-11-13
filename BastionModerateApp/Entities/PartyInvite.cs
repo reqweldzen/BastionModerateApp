@@ -11,7 +11,7 @@ namespace BastionModerateApp.Entities
 	/// <summary>
 	/// パーティ募集
 	/// </summary>
-	[Table("party_invites", Schema = "transaction")]
+	[Table("party_invites")]
 	public class PartyInvite
 	{
 		/// <summary>

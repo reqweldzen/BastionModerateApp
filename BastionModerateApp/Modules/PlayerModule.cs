@@ -1,14 +1,12 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using BastionModerateApp.Entities;
 using BastionModerateApp.Models;
 using Discord.Commands;
 using Microsoft.Extensions.Configuration;
-using JsonSerializer = Utf8Json.JsonSerializer;
+using Utf8Json;
 
 namespace BastionModerateApp.Modules
 {
@@ -46,9 +44,7 @@ namespace BastionModerateApp.Modules
 
 			var entity = new User
 			{
-				DiscordId = Context.User.Id,
-				PlayerName = character.Character.Name,
-				PlayerId = character.Character.ID
+				DiscordId = Context.User.Id
 			};
 
 			await _db.AddAsync(entity);
@@ -80,10 +76,7 @@ namespace BastionModerateApp.Modules
 			var character = await GetCharacterAsync(_clientFactory, _configuration, id);
 			if (character == null)
 				return;
-
-			user.PlayerId = character.Character.ID;
-			user.PlayerName = character.Character.Name;
-
+			
 			await _db.SaveChangesAsync();
 
 			var builder = new StringBuilder()

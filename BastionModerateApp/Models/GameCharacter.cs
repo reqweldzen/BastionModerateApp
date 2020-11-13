@@ -2,6 +2,6 @@
 {
 	public class GameCharacter
 	{
-		public Character Character { get; set; }
+		public Character Character { get; set; } = null!;
 	}
 }

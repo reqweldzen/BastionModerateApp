@@ -39,9 +39,8 @@ namespace BastionModerateApp
 					.AddJsonFile($"appsettings.json", optional: false)
 					.Build();
 				
-				optionsBuilder.UseNpgsql(configuration.GetConnectionString("Default"));
+				optionsBuilder.UseSqlite(configuration.GetConnectionString("Default"));
 				optionsBuilder.UseLazyLoadingProxies();
-				optionsBuilder.UseSnakeCaseNamingConvention();
 			}
 		}
 

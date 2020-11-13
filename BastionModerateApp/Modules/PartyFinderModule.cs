@@ -18,7 +18,7 @@ namespace BastionModerateApp.Modules
 	/// パーティ募集モジュール
 	/// </summary>
 	[Group("invite")]
-	public class InviteModule : ModuleBase
+	public class PartyFinderModule : ModuleBase
 	{
 		private readonly BastionContext _db;
 		private readonly AccountService _accountService;
@@ -28,7 +28,7 @@ namespace BastionModerateApp.Modules
 		/// </summary>
 		/// <param name="db"></param>
 		/// <param name="accountService"></param>
-		public InviteModule(BastionContext db, AccountService accountService)
+		public PartyFinderModule(BastionContext db, AccountService accountService)
 		{
 			_db = db;
 			_accountService = accountService;
@@ -79,17 +79,7 @@ namespace BastionModerateApp.Modules
 			var template = _db.ContentTemplates.FirstOrDefault(x => x.ShortcutName == shortcutName);
 			if (template == null) return;
 
-			var user = await _db.Users.FirstOrDefaultAsync(IsRegisteredUser);
-			if (user == null)
-			{
-				if (!await _accountService.RegisterAsync(Context))
-				{
-					await ReplyAsync("You are not registered.");
-					return;
-				}
-			}
-
-			user = await _db.Users.FirstOrDefaultAsync(IsRegisteredUser);
+			var user = await _accountService.GetOrRegisterAsync(Context.User.Id);
 
 			var invite = new PartyInvite
 			{
@@ -177,7 +167,7 @@ namespace BastionModerateApp.Modules
 			foreach (var entry in entries)
 			{
 				builder.AppendLine(
-					$"{emotes.FirstOrDefault(x => x.Name == entry.Job.ShortcutName)} {entry.User.PlayerName}");
+					$"{emotes.FirstOrDefault(x => x.Name == entry.Job.ShortcutName)} {(await Context.Guild.GetUserAsync(entry.User.DiscordId)).Nickname}");
 			}
 
 			await ReplyAsync(builder.ToString());

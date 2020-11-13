@@ -6,7 +6,7 @@ namespace BastionModerateApp.Entities
 	/// <summary>
 	/// コンテンツ種別
 	/// </summary>
-	[Table("content_types", Schema = "master")]
+	[Table("content_types")]
 	public class ContentType
 	{
 		/// <summary>

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using BastionModerateApp.Services;
@@ -29,30 +28,36 @@ namespace BastionModerateApp
 	internal class BotService : BackgroundService
 	{
 		private readonly IConfiguration _configuration;
-		private DiscordSocketClient _client;
-		private CommandService _commands;
-		private IServiceProvider _provider;
+		private readonly DiscordSocketClient _client;
 
+		/// <summary>
+		/// Discord BOTクライアントを作成します.
+		/// </summary>
+		/// <param name="configuration"></param>
 		public BotService(IConfiguration configuration)
 		{
 			_configuration = configuration;
+			
+			_client = new DiscordSocketClient(new DiscordSocketConfig {LogLevel = LogSeverity.Info});
 		}
 
+		/// <inheritdoc />
 		protected override async Task ExecuteAsync(CancellationToken cancellationToken)
 		{
 			BastionContext.IsMigration = false;
 			
-			_client = new DiscordSocketClient(new DiscordSocketConfig {LogLevel = LogSeverity.Info});
-
 			var services = ConfigureServices();
 			services.GetRequiredService<LogService>();
 			await services.GetRequiredService<CommandHandlingService>().InstallCommandsAsync(services);
+			services.GetRequiredService<AccountService>();
 			services.GetRequiredService<ReactionHandler>();
 			
 			await _client.LoginAsync(TokenType.Bot, _configuration.GetValue<string>("Token"));
 			await _client.StartAsync();
 		}
-		
+
+
+		/// <inheritdoc />
 		public override async Task StopAsync(CancellationToken cancellationToken)
 		{
 			await _client.StopAsync();
@@ -77,9 +82,8 @@ namespace BastionModerateApp
 				// Add additional services here...
 				.AddDbContext<BastionContext>(builder =>
 				{
-					builder.UseNpgsql(_configuration.GetConnectionString("Default"));
+					builder.UseSqlite(_configuration.GetConnectionString("Default"));
 					builder.UseLazyLoadingProxies();
-					builder.UseSnakeCaseNamingConvention();
 				})
 				.AddSingleton<ReactionHandler>()
 				.BuildServiceProvider();

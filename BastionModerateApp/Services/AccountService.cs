@@ -1,21 +1,15 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using BastionModerateApp.Entities;
-using Discord.Commands;
-using Discord.WebSocket;
-using Microsoft.EntityFrameworkCore.Internal;
 
 namespace BastionModerateApp.Services
 {
 	public class AccountService
 	{
-		private readonly DiscordSocketClient _client;
 		private readonly BastionContext _db;
 
-		public AccountService(DiscordSocketClient client, BastionContext db)
+		public AccountService(BastionContext db)
 		{
-			_client = client;
 			_db = db;
 		}
 
@@ -23,27 +17,24 @@ namespace BastionModerateApp.Services
 		/// ユーザー登録をする。
 		/// </summary>
 		/// <returns></returns>
-		public async Task<bool> RegisterAsync(ICommandContext context)
+		public async ValueTask<User> GetOrRegisterAsync(ulong userId)
 		{
-			return false;
-			if (_db.Users.Any(x => x.DiscordId == context.User.Id))
+			var result = _db.Users.SingleOrDefault(x => x.DiscordId == userId);
+			if (result != null)
 			{
-				await context.Channel.SendMessageAsync("It has already been registered.");
-				return false;
+				return result;
 			}
 
-			var entity = new User
+			var user = new User
 			{
-				DiscordId = context.User.Id,
-				PlayerName = null,
-				PlayerId = null
+				DiscordId = userId
 			};
 
-			await _db.AddAsync(entity);
+			await _db.AddAsync(user);
 
 			await _db.SaveChangesAsync();
 
-			return true;
+			return user;
 		}
 	}
 }

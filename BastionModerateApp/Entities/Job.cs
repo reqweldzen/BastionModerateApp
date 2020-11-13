@@ -6,7 +6,7 @@ namespace BastionModerateApp.Entities
 	/// <summary>
 	/// 職業
 	/// </summary>
-	[Table("jobs", Schema = "master")]
+	[Table("jobs")]
 	public class Job
 	{
 		/// <summary>

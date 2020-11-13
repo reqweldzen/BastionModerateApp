@@ -7,7 +7,7 @@ namespace BastionModerateApp.Entities
 	/// <summary>
 	/// コンテンツテンプレート
 	/// </summary>
-	[Table("content_templates", Schema = "master")]
+	[Table("content_templates")]
 	public class ContentTemplate
 	{
 		/// <summary>

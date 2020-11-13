@@ -7,7 +7,7 @@ namespace BastionModerateApp.Entities
 	/// <summary>
 	/// ユーザー
 	/// </summary>
-	[Table("users", Schema = "transaction")]
+	[Table("users")]
 	public class User
 	{
 		/// <summary>
@@ -20,14 +20,14 @@ namespace BastionModerateApp.Entities
 		/// </summary>
 		public ulong DiscordId { get; set; }
 		
-		/// <summary>
-		/// プレイヤーID
-		/// </summary>
-		public long? PlayerId { get; set; }
-		
-		/// <summary>
-		/// プレイヤー名
-		/// </summary>
-		public string? PlayerName { get; set; }
+		// /// <summary>
+		// /// プレイヤーID
+		// /// </summary>
+		// public long? PlayerId { get; set; }
+		//
+		// /// <summary>
+		// /// プレイヤー名
+		// /// </summary>
+		// public string? PlayerName { get; set; }
 	}
 }

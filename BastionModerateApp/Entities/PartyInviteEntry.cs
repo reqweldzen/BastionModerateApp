@@ -9,7 +9,7 @@ namespace BastionModerateApp.Entities
 	/// <summary>
 	/// パーティ募集エントリー
 	/// </summary>
-	[Table("party_invite_entries", Schema = "transaction")]
+	[Table("party_invite_entries")]
 	public class PartyInviteEntry
 	{
 		/// <summary>
