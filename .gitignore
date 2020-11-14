@@ -441,3 +441,4 @@ MigrationBackup/
 FodyWeavers.xsd
 BastionModerateApp/appsettings.json
 .DS_Store
+botapp.db
