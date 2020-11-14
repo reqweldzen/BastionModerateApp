@@ -71,8 +71,6 @@ namespace BastionModerateApp.Modules
 		public async Task CreatePartyFinderAsync(string? shortcutName = null, int purpose = 1, DateTime? startDate = null,
 			DateTime? endDate = null)
 		{
-			bool IsRegisteredUser(User x) => x.DiscordId == Context.User.Id;
-
 			// トランザクション開始
 			await using var transaction = await _db.Database.BeginTransactionAsync();
 
@@ -108,6 +106,8 @@ namespace BastionModerateApp.Modules
 			var inviteMessage = await ReplyAsync(embed: inviteEmbed.ToEmbed());
 			var memberMessage = await ReplyAsync("参加者 \uD83D\uDCCC");
 
+			await inviteMessage.PinAsync();
+
 			invite.MessageId = inviteMessage.Id;
 			invite.MemberListMessageId = memberMessage.Id;
 			_db.PartyInvites.Update(invite);
@@ -118,6 +118,8 @@ namespace BastionModerateApp.Modules
 			await transaction.CommitAsync();
 		}
 
+		
+		
 		/// <summary>
 		/// パーティ募集を終了する。
 		/// </summary>
@@ -348,55 +350,5 @@ namespace BastionModerateApp.Modules
 		//
 		// 	await message.ModifyAsync(properties => { properties.Embed = CreateEmbed(message, invite, inviter); });
 		// }
-
-		private Embed CreateEmbed(IUserMessage message, PartyInvite invite, IUser user)
-		{
-			var template = invite.ContentTemplate;
-			var contentName = !string.IsNullOrEmpty(template.QuestUrl)
-				? $"[{template.ContentName}]({template.QuestUrl})"
-				: template.ContentName;
-
-			return new EmbedBuilder
-				{
-					Title = "パーティ募集",
-					Description = $"#{invite.PartyInviteId}"
-				}
-				.AddField(builder =>
-				{
-					builder.Name = "高難易度コンテンツ";
-					builder.Value = contentName;
-				})
-				.AddField("目的", invite.Purpose.DisplayName(), true)
-				.AddField("開始日時", invite.StartDate.ToString("yyyy/MM/dd HH:mm"), true)
-				.AddField("参加人数", $"{invite.PartyInviteEntries.Count}/8 人", true)
-				.WithAuthor(user)
-				.WithColor(Color.Purple)
-				.WithCurrentTimestamp()
-				.Build();
-		}
-
-		private EmbedBuilder CreateFinishEmbed(IUserMessage message, PartyInvite invite, IUser user)
-		{
-			var template = invite.ContentTemplate;
-			var contentName = !string.IsNullOrEmpty(template.QuestUrl)
-				? $"[{template.ContentName}]({template.QuestUrl})"
-				: template.ContentName;
-
-			return new EmbedBuilder
-				{
-					Title = "パーティ募集 (終了)",
-					Description = $"#{invite.PartyInviteId}"
-				}
-				.AddField(builder =>
-				{
-					builder.Name = "高難易度コンテンツ";
-					builder.Value = contentName;
-				})
-				.AddField("目的", invite.Purpose.DisplayName(), true)
-				.AddField("開始日時", invite.StartDate.ToString("yyyy/MM/dd HH:mm"), true)
-				.WithAuthor(user)
-				.WithColor(Color.Purple)
-				.WithCurrentTimestamp();
-		}
 	}
 }

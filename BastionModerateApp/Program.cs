@@ -52,7 +52,7 @@ namespace BastionModerateApp
 			services.GetRequiredService<AccountService>();
 			services.GetRequiredService<ReactionHandler>();
 			
-			await _client.LoginAsync(TokenType.Bot, _configuration.GetValue<string>("Token"));
+			await _client.LoginAsync(TokenType.Bot, _configuration.GetSection("Discord").GetValue<string>("Token"));
 			await _client.StartAsync();
 		}
 

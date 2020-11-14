@@ -37,8 +37,6 @@ namespace BastionModerateApp.Services
 		private async Task ReactionAdded(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel,
 			SocketReaction reaction)
 		{
-			if (!reaction.User.IsSpecified) return;
-			
 			await using var transaction = await _db.Database.BeginTransactionAsync();
 
 			var user = await _accountService.GetOrRegisterAsync(reaction.UserId);
@@ -84,9 +82,9 @@ namespace BastionModerateApp.Services
 			await _db.PartyInviteEntries.AddAsync(entry);
 			await _db.SaveChangesAsync();
 
-
+			var guildUser = await ((IGuildChannel) channel).Guild.GetUserAsync(entry.User.DiscordId);
 			var split = memberMessage.Content.Split("\r\n").ToList();
-			split.Add($"{reaction.Emote} {(channel as IGuildChannel)?.Guild.GetUserAsync(entry.User.DiscordId)}");
+			split.Add($"{reaction.Emote} {guildUser.Nickname ?? $"{guildUser.Username}#{guildUser.Discriminator}"}");
 			
 			inviteEmbed.CurrentPlayer = invite.PartyInviteEntries.Count;
 
@@ -107,13 +105,11 @@ namespace BastionModerateApp.Services
 		private async Task ReactionRemoved(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel,
 			SocketReaction reaction)
 		{
+			return;
+			
 			await using var transaction = await _db.Database.BeginTransactionAsync();
 
-			var user = await _db.Users.FirstOrDefaultAsync(x => x.DiscordId == reaction.UserId);
-			if (user == null)
-			{
-				return;
-			}
+			var user = await _accountService.GetOrRegisterAsync(reaction.UserId);
 
 			var job = await _db.Jobs.FirstOrDefaultAsync(x => x.ShortcutName == reaction.Emote.Name);
 			if (job == null)
@@ -122,12 +118,10 @@ namespace BastionModerateApp.Services
 			}
 
 			var message = await cache.DownloadAsync();
-
 			var embeds = message.Embeds.ToList();
 			if (!embeds.Any()) return;
 
 			var inviteEmbed = new InviteEmbedWrapper(embeds[0].ToEmbedBuilder());
-
 			if (inviteEmbed.InviteId == null)
 			{
 				await channel.SendMessageAsync("Unable to get the invitation ID.");
